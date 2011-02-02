@@ -64,12 +64,36 @@
   (define (readString)
     (list (readName) (readName)))
 
+  ;;
+  ;; readByte reads in a 1-byte (8-bit) integer
+  ;;
+  (define readByte read-byte)
+
   ;; 
   ;; readShort reads in a two-byte (16-bit) integer
   ;;
   (define (readShort)
-    (fx+ (arithmetic-shift (read-byte) 8)
-                       (read-byte)))
+    (fx+ (fxshl (read-byte) 8)
+         (read-byte)))
+
+  ;;
+  ;; readInt reads in a 4-byte (32-bit) integer
+  ;;
+  (define (readInt)
+    (+ (fxshl (read-byte) 24)
+       (fxshl (read-byte) 16)
+       (fxshl (read-byte) 8)
+       (read-byte)))
+
+  (define (readLong)
+    (+ (fxshl (read-byte) 56)
+       (fxshl (read-byte) 48)
+       (fxshl (read-byte) 40)
+       (fxshl (read-byte) 32)
+       (fxshl (read-byte) 24)
+       (fxshl (read-byte) 16)
+       (fxshl (read-byte) 8)
+       (read-byte)))
 
   ;;
   ;; readTag reads in an arbitrary tag. It is basically a switch statement over
@@ -80,18 +104,28 @@
       (cond
         ;; TAG_Compound
         ([= type 10]
-         `(compound ,(readCompound)))
+         `(compound . ,(readCompound)))
         ;; TAG_End
         ([= type 0]
          '())
+        ;; TAG_Byte
+        ([= type 1]
+         `(byte . ,(readByte)))
         ;; TAG_Short
         ([= type 2]
          `(short . ,(readShort)))
+        ;; TAG_Int
+        ([= type 3]
+         `(int . ,(readInt)))
+        ;; TAG_Long
+        ([= type 4]
+         `(long . ,(readLong)))
         ;; TAG_String
         ([= type 8]
          `(string ,(readString)))
         (else
-          (error "Unrecognized type" type))
+          ;(error "Unrecognized type" type))
+          `(unrecognized ,type))
         )))
 
   ;; Make sure top-level tag is compound.
