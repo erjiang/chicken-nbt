@@ -55,7 +55,6 @@
     ;; We need to get the length of the name. The length is stored as a
     ;; two-byte integer
     (let ([strlen (readShort)])
-      (printf "Gonna read a ~s long string" strlen)
       (read-string strlen)))
 
   ;;
@@ -63,7 +62,7 @@
   ;; a TAG_String consists of two strings: the name and the payload.
   ;;
   (define (readString)
-    (cons (readName) (readName)))
+    (list (readName) (readName)))
 
   ;; 
   ;; readShort reads in a two-byte (16-bit) integer
@@ -81,13 +80,16 @@
       (cond
         ;; TAG_Compound
         ([= type 10]
-         (readCompound))
+         `(compound ,(readCompound)))
         ;; TAG_End
         ([= type 0]
          '())
+        ;; TAG_Short
+        ([= type 2]
+         `(short . ,(readShort)))
         ;; TAG_String
         ([= type 8]
-         (readString))
+         `(string ,(readString)))
         (else
           (error "Unrecognized type" type))
         )))
@@ -95,7 +97,7 @@
   ;; Make sure top-level tag is compound.
   (if (= (read-byte) 10)
     ;; kick off the NBT parsing!
-    (readCompound)
+    `(compound . ,(readCompound))
     (begin
       (error "Top-level tag is not a compound tag!"))))
 
