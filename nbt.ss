@@ -121,29 +121,73 @@
   ;;      |______b1_______|______b2_______|______b3_______|______b4_______| 
   ;;
   ;; The last little *(float*)&i part taken from the q3_sqrt code :D
-;              uint8_t b1 = (uint8_t) i1;
-;               uint8_t b2 = (uint8_t) i2;
-;               uint8_t b3 = (uint8_t) i3;
-;               uint8_t b4 = (uint8_t) i4;
-;
-;               uint32_t i = 0;
-;
-;               i = b1;
-;               i = (i << 8) | b2;
-;               i = (i << 8) | b3;
-;               i = (i << 8) | b4;
-;
-;               float f = *(float*)&i;
-;
-              " C_return(42);")])
+               "uint8_t b1 = (uint8_t) i1;
+                uint8_t b2 = (uint8_t) i2;
+                uint8_t b3 = (uint8_t) i3;
+                uint8_t b4 = (uint8_t) i4;
+ 
+                uint32_t i = 0;
+ 
+                i = b1;
+                i = (i << 8) | b2;
+                i = (i << 8) | b3;
+                i = (i << 8) | b4;
+ 
+                float f = *(float*)&i;
+ 
+                C_return(f);")])
         (let* ([i1 (read-byte)]
                [i2 (read-byte)]
                [i3 (read-byte)]
                [i4 (read-byte)])
           (c-read-float i1 i2 i3 i4))))
 
+  ;;
+  ;; See comments at readFloat
+  ;;
   (define (readDouble)
-    (+ (readFloat) (readFloat)))
+    (let ([c-read-double
+            (foreign-lambda* double
+              ((int i1)
+               (int i2)
+               (int i3)
+               (int i4)
+               (int i5)
+               (int i6)
+               (int i7)
+               (int i8))
+               "uint8_t b1 = (uint8_t) i1;
+                uint8_t b2 = (uint8_t) i2;
+                uint8_t b3 = (uint8_t) i3;
+                uint8_t b4 = (uint8_t) i4;
+                uint8_t b5 = (uint8_t) i5;
+                uint8_t b6 = (uint8_t) i6;
+                uint8_t b7 = (uint8_t) i7;
+                uint8_t b8 = (uint8_t) i8;
+ 
+                uint64_t i = 0;
+ 
+                i = b1;
+                i = (i << 8) | b2;
+                i = (i << 8) | b3;
+                i = (i << 8) | b4;
+                i = (i << 8) | b5;
+                i = (i << 8) | b6;
+                i = (i << 8) | b7;
+                i = (i << 8) | b8;
+ 
+                double d = *(double*)&i;
+ 
+                C_return(d);")])
+        (let* ([i1 (read-byte)]
+               [i2 (read-byte)]
+               [i3 (read-byte)]
+               [i4 (read-byte)]
+               [i5 (read-byte)]
+               [i6 (read-byte)]
+               [i7 (read-byte)]
+               [i8 (read-byte)])
+          (c-read-double i1 i2 i3 i4 i5 i6 i7 i8))))
 
   ;; readByteArray reads in a TAG_Byte_Array and returns a vector of numbers
   ;; representing that byte array.  Note that, since Chicken promotes all read
@@ -175,21 +219,16 @@
   ;; end of the list, as specified by the TAG_Int length tag
   ;;
   (define (readList)
-    (printf "starting readList with pre-types ~s...\n" pre-types)
     (let* ([type (read-byte)]
            [len (readInt)]
-           [blah (printf "got type ~s and len ~s\n" type len)]
            ;;
            ;; typedef is a row pulled out of our type table (see below), that
            ;; takes the form:
            ;;     `(4 long ,readLong)
            ;;
-           [ulbah (printf "got pre-types ~s\n" pre-types)]
            [typedef (assq type pre-types)]
-           [lbah (printf "got typedef ~s\n" typedef)]
            [name (cadr typedef)]
            [reader (caddr typedef)])
-      (printf "readList with typedef ~s\n" typedef)
       (letrec ([continueList
                  (lambda (n)
                    (if (= n 0)
@@ -218,13 +257,11 @@
   ;; corresponding name and procedure out of the table types (above).
   ;;
   (define (readTag type)
-    (printf "Gonna read type ~s\n" type)
     ;; special case for end tag
     (if (= type 0) '()
       (let* ([typedef (assq type types)]
              [name (cadr typedef)]
              [reader (caddr typedef)])
-        (printf "readTag about to launch ~s for type ~s\n" typedef type)
         `(,name ,(readName) ,(reader)))))
 
   ;; Make sure top-level tag is compound.
@@ -237,6 +274,8 @@
     (begin
       (error "Top-level tag is not a compound tag!"))))
 
+;; A tiny util to get the last element out of a list.
+;; I suppose I could use SRFI-1, but why?
 (define (last ls)
   (if (null? (cdr ls))
     (car ls)
