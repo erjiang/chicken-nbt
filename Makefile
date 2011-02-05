@@ -1,8 +1,8 @@
 CFLAGS=
 SC=csc
 
-leveldat: leveldat.ss Makefile
-	csc leveldat.ss
+nbt: nbt.ss Makefile
+	csc nbt.ss
 
 clean:
-	rm -f leveldat leveldat.c leveldat.ss~
+	rm -f nbt nbt.c nbt.ss~
