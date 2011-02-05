@@ -215,12 +215,13 @@
   (define pre-types #f)
 
   ;;
-  ;; readList reads a list tag into a list using recursion until it reaches the
-  ;; end of the list, as specified by the TAG_Int length tag
+  ;; readList reads a list tag into a vector using recursion until it reaches
+  ;; the end of the list, as specified by the TAG_Int length tag
   ;;
   (define (readList)
     (let* ([type (read-byte)]
            [len (readInt)]
+           [vec (make-vector len)]
            ;;
            ;; typedef is a row pulled out of our type table (see below), that
            ;; takes the form:
@@ -230,12 +231,15 @@
            [name (cadr typedef)]
            [reader (caddr typedef)])
       (letrec ([continueList
-                 (lambda (n)
-                   (if (= n 0)
-                     '()
-                     (cons `(name ,(reader))
-                       (continueList (- n 1)))))])
-        (continueList len))))
+                 (lambda (i)
+                   (if (= i len)
+                     (void)
+                     (begin
+                       (vector-set! vec i `(name ,(reader)))
+                       (continueList (+ i 1)))))])
+        (begin
+          (continueList 0)
+          vec))))
 
   ;;
   ;; A table of tag IDs, their names, and their corresponding read procedures
