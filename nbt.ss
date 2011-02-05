@@ -35,7 +35,7 @@
 ;; vectors:
 ;;     #(tag1 tag2 tag3 ...)
 ;;
-(define readNBT
+(define (readNBT)
 ;    #;(cond
 ;      ;; TAG_Compound
 ;      ([= type 10]
@@ -176,11 +176,17 @@
     (+ (readFloat) (readFloat)))
 
   ;;
+  ;; This is an ugly hack to first declare pre-types, and then set! it to types
+  ;; later because apparently, Chicken doesn't deal too well with internal
+  ;; defines: http://paste.lisp.org/display/119362
+  (define pre-types #f)
+
+  ;;
   ;; readList reads a list tag into a list using recursion until it reaches the
   ;; end of the list, as specified by the TAG_Int length tag
   ;;
   (define (readList)
-    (printf "starting readList with types ~s...\n" types)
+    (printf "starting readList with pre-types ~s...\n" pre-types)
     (let* ([type (read-byte)]
            [len (readInt)]
            [blah (printf "got type ~s and len ~s\n" type len)]
@@ -189,8 +195,8 @@
            ;; takes the form:
            ;;     `(4 long ,readLong)
            ;;
-           [ulbah (printf "got types ~s\n" types)]
-           [typedef (assq type types)]
+           [ulbah (printf "got pre-types ~s\n" pre-types)]
+           [typedef (assq type pre-types)]
            [lbah (printf "got typedef ~s\n" typedef)]
            [name (cadr typedef)]
            [reader (caddr typedef)])
@@ -232,14 +238,15 @@
         (printf "readTag about to launch ~s for type ~s\n" typedef type)
         `(,name ,(readName) ,(reader)))))
 
-  (lambda ()
-    ;; Make sure top-level tag is compound.
-    (if (= (read-byte) 10)
-      (begin (pretty-print types)
-      ;; kick off the NBT parsing!
+  ;; Make sure top-level tag is compound.
+  (if (= (read-byte) 10)
+    ;; kick off the NBT parsing!
+    (begin
+      ;; see ugly-hack note at "pre-types"
+      (set! pre-types types)
       `(compound ,(readName) . ,(readCompound)))
-      (begin
-        (error "Top-level tag is not a compound tag!")))))
+    (begin
+      (error "Top-level tag is not a compound tag!"))))
 
 (define (last ls)
   (if (null? (cdr ls))
