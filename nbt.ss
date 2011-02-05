@@ -36,44 +36,14 @@
 ;;     #(tag1 tag2 tag3 ...)
 ;;
 (define (readNBT)
-;    #;(cond
-;      ;; TAG_Compound
-;      ([= type 10]
-;       `(compound ,(readName) ,(readCompound)))
-;      ;; TAG_End
-;      ([= type 0]
-;       '())
-;      ;; TAG_Byte
-;      ([= type 1]
-;       `(byte ,(readName) ,(readByte)))
-;      ;; TAG_Short
-;      ([= type 2]
-;       `(short ,(readName) ,(readShort)))
-;      ;; TAG_Int
-;      ([= type 3]
-;       `(int ,(readName) ,(readInt)))
-;      ;; TAG_Long
-;      ([= type 4]
-;       `(long ,(readName) ,(readLong)))
-;      ;; TAG_Float
-;      ([= type 5]
-;       `(float ,(readName) ,(readFloat)))
-;      ;; TAG_Double
-;      ([= type 6]
-;       `(double ,(readName) ,(readDouble)))
-;      ;; TAG_String
-;      ;; A TAG_String is really just two strings: a name and a payload
-;      ([= type 8]
-;       `(string ,(readName) ,(readName)))
-;      ([= type 9]
-;       `(list . ,(readList)))
-;      (else
-;        ;(error "Unrecognized type" type))
-;        `(unrecognized ,type)))
 
   ;;
   ;; readName reads in a UTF8 string. It is used for reading the names off
   ;; of named tags.
+  ;;
+  ;; Note that importing utf8.egg will actually break this procedure! The
+  ;; length of the string is defined as exactly how many *bytes* long the
+  ;; string is, NOT how many utf8 chars long it is.
   ;;
   (define (readName)
     ;; We need to get the length of the name. The length is stored as a
@@ -148,7 +118,7 @@
   ;;    sign     exponent            fraction
   ;;       ||===============|=============================================|
   ;;      |_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|
-  ;;      |_______________|_______________|_______________|_______________| 
+  ;;      |______b1_______|______b2_______|______b3_______|______b4_______| 
   ;;
   ;; The last little *(float*)&i part taken from the q3_sqrt code :D
 ;              uint8_t b1 = (uint8_t) i1;
@@ -174,6 +144,25 @@
 
   (define (readDouble)
     (+ (readFloat) (readFloat)))
+
+  ;; readByteArray reads in a TAG_Byte_Array and returns a vector of numbers
+  ;; representing that byte array.  Note that, since Chicken promotes all read
+  ;; bytes into ints that the resulting vector will take up 4--8 times as much
+  ;; memory as it did in the original file format.
+  (define (readByteArray)
+    ;; TAG_Byte_Array comes with an Integer length specification
+    (let* ([len (readInt)]
+           [bytevec (make-vector len)])
+      (letrec ([continueByteArray
+                 (lambda (i)
+                   (if (= i len)
+                     (void) ;; end of vector
+                     (begin
+                       (vector-set! bytevec i (readByte))
+                       (continueByteArray (+ 1 i)))))])
+        (begin
+          (continueByteArray 0)
+          bytevec))))
 
   ;;
   ;; This is an ugly hack to first declare pre-types, and then set! it to types
@@ -219,7 +208,7 @@
                   (4  long  ,readLong)
                   (5  float ,readFloat)
                   (6  double ,readDouble)
-                 ;(7  byte-array ,readByteArray)
+                  (7  byte-array ,readByteArray)
                   (8  string ,readName)
                   (9  list   ,readList)
                   (10 compound ,readCompound)))
