@@ -216,7 +216,11 @@
 
   ;;
   ;; readList reads a list tag into a vector using recursion until it reaches
-  ;; the end of the list, as specified by the TAG_Int length tag
+  ;; the end of the list, as specified by the TAG_Int length tag.
+  ;;
+  ;; Why are NBT lists represented as vectors here? NBT defines them to be
+  ;; fixed-length, single-type structures (unlike TAG_Compound), so it's clear
+  ;; that they're not like linked lists, but instead like arrays
   ;;
   (define (readList)
     (let* ([type (read-byte)]
@@ -235,7 +239,7 @@
                    (if (= i len)
                      (void)
                      (begin
-                       (vector-set! vec i `(name ,(reader)))
+                       (vector-set! vec i `(,name ,(reader)))
                        (continueList (+ i 1)))))])
         (begin
           (continueList 0)

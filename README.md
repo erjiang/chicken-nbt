@@ -63,13 +63,22 @@ The data structure, as parsed by chicken-nbt, looks like:
       (int "intTest" 2147483647)
       (compound
         "nested compound test"
-        ((compound "ham" ((string "name" "Hampus") (float "value" 0.75)))
-         (compound "egg" ((string "name" "Eggbert") (float "value" 0.5)))))
-      (list "listTest (long)" #((name 11) (name 12) (name 13) (name 14) (name 15)))
+        ((compound "ham"
+           ((string "name" "Hampus")
+            (float "value" 0.75)))
+         (compound "egg"
+           ((string "name" "Eggbert")
+            (float "value" 0.5)))))
+      (list "listTest (long)"
+        #((long 11)
+          (long 12)
+          (long 13)
+          (long 14)
+          (long 15)))
       (list "listTest (compound)"
-            #((name ((string "name" "Compound tag #0")
+        #((compound ((string "name" "Compound tag #0")
                      (long "created-on" 1264099775885)))
-              (name ((string "name" "Compound tag #1")
+          (compound ((string "name" "Compound tag #1")
                      (long "created-on" 1264099775885)))))
       (byte "byteTest" 127)
       (byte-array
