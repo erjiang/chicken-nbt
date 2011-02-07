@@ -73,8 +73,12 @@
   ;; readShort reads in a two-byte (16-bit) integer
   ;;
   (define (readShort)
-    (+ (fxshl (read-byte) 8)
-         (read-byte)))
+    (let ([val (+ (fxshl (read-byte) 8)
+                  (read-byte))])
+      ;; account for signed value
+      (if (> val 32767)
+        (- val 65536)
+        val)))
 
   ;;
   ;; readInt reads in a 4-byte (32-bit) integer
@@ -90,14 +94,17 @@
   ;; work for 32-bit numbers.
   ;;
   (define (readLong)
-    (+ (arithmetic-shift (read-byte) 56)
-       (arithmetic-shift (read-byte) 48)
-       (arithmetic-shift (read-byte) 40)
-       (arithmetic-shift (read-byte) 32)
-       (arithmetic-shift (read-byte) 24)
-       (arithmetic-shift (read-byte) 16)
-       (arithmetic-shift (read-byte) 8)
-       (read-byte)))
+    (let ([val (+ (arithmetic-shift (read-byte)  56)
+                  (arithmetic-shift (read-byte) 48)
+                  (arithmetic-shift (read-byte) 40)
+                  (arithmetic-shift (read-byte) 32)
+                  (arithmetic-shift (read-byte) 24)
+                  (arithmetic-shift (read-byte) 16)
+                  (arithmetic-shift (read-byte) 8)
+                  (read-byte))])
+      (if (> val 9223372036854775807)
+        (- val 18446744073709551616)
+        val)))
 
   ;;
   ;; These are some unfun C routines to convert 4 int-promoted bytes to a float
