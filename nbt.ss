@@ -65,9 +65,13 @@
       (continueCompound)))
 
   ;;
-  ;; readByte reads in a 1-byte (8-bit) integer
+  ;; readByte reads in a 1-byte (8-bit) *signed* integer
   ;;
-  (define readByte read-byte)
+  (define (readByte)
+    (let ([val (read-byte)])
+      (if (>= val 128)
+        (- val 256)
+        val)))
 
   ;; 
   ;; readShort reads in a two-byte (16-bit) integer
@@ -84,27 +88,42 @@
   ;; readInt reads in a 4-byte (32-bit) integer
   ;;
   (define (readInt)
-    (+ (arithmetic-shift (read-byte) 24)
+    (let ([val (+ (arithmetic-shift (read-byte) 24)
        (arithmetic-shift (read-byte) 16)
        (arithmetic-shift (read-byte) 8)
-       (read-byte)))
+       (read-byte))])
+      ;; account for signed integer
+      (if (>= val (expt 2 31))
+        (- val (expt 2 32))
+        val)))
 
   ;; 
   ;; We can't necessarily use fxshl here, because fixnum operations may only
-  ;; work for 32-bit numbers.
+  ;; work for 32-bit numbers.  Additionally, csc bignums (via "numbers") doesn't
+  ;; seem to like subtracting big immediates, so we branch depending on whether
+  ;; the first byte indicates that the whole number is positive or negative.
   ;;
   (define (readLong)
-    (let ([val (+ (arithmetic-shift (read-byte)  56)
-                  (arithmetic-shift (read-byte) 48)
-                  (arithmetic-shift (read-byte) 40)
-                  (arithmetic-shift (read-byte) 32)
-                  (arithmetic-shift (read-byte) 24)
-                  (arithmetic-shift (read-byte) 16)
-                  (arithmetic-shift (read-byte) 8)
-                  (read-byte))])
-      (if (> val 9223372036854775807)
-        (- val 18446744073709551616)
-        val)))
+    (let ([first-byte (read-byte)])
+      (if (>= first-byte 128)
+        ;; we cannot literally write -2^63 because it's big
+        (+ (- (expt 2 63))
+           (arithmetic-shift (- first-byte 128) 56)
+           (arithmetic-shift (read-byte) 48)
+           (arithmetic-shift (read-byte) 40)
+           (arithmetic-shift (read-byte) 32)
+           (arithmetic-shift (read-byte) 24)
+           (arithmetic-shift (read-byte) 16)
+           (arithmetic-shift (read-byte) 8)
+           (read-byte))
+        (+ (arithmetic-shift first-byte  56)
+           (arithmetic-shift (read-byte) 48)
+           (arithmetic-shift (read-byte) 40)
+           (arithmetic-shift (read-byte) 32)
+           (arithmetic-shift (read-byte) 24)
+           (arithmetic-shift (read-byte) 16)
+           (arithmetic-shift (read-byte) 8)
+           (read-byte)))))
 
   ;;
   ;; These are some unfun C routines to convert 4 int-promoted bytes to a float
@@ -218,7 +237,8 @@
   ;;
   ;; This is an ugly hack to first declare pre-types, and then set! it to types
   ;; later because apparently, Chicken doesn't deal too well with internal
-  ;; defines: http://paste.lisp.org/display/119362
+  ;; defines: http://paste.lisp.org/display/119362 and
+  ;; http://lists.nongnu.org/archive/html/chicken-users/2011-02/msg00011.html
   (define pre-types #f)
 
   ;;
