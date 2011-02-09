@@ -1,31 +1,46 @@
 ;;
-;; Level.dat inspector
+;; chicken-nbt
 ;; ===================
+;;
+;; A Minecraft NBT reader
+;; -------------------
 ;;
 ;; Source code written for Chicken Scheme, requiring certain eggs
 ;; 
-;; Pass this program a level.dat file from Minecraft and it will tell you
-;; what's inside.
 ;;
 
 ;;
-;; This program declares itself as the "nbt" module, which exports "nbt:read"
+;; This file provides the "nbt" module, which exports "nbt:read"
 ;; and "nbt:read-uncompressed".
 ;;
 (module nbt (nbt:read nbt:read-uncompressed)
 
+;;
+;; Requirements
+;; ------------
+;;
 (import scheme chicken foreign extras)
 
+;;
+;; The *z3* egg is needed for gzip support
+;;
 (require-extension z3)
 
-;; bignum support is needed for dealing with long longs
+;;
+;; The *numbers* module is needed for dealing with long integers
+;;
 (use numbers)
 
-;; SRFI 4 is used for u8vectors
+;;
+;; *SRFI 4* is used for u8vectors
+;;
 (use srfi-4)
 
 ;;
-;; nbt:read is a wrapper around do-readNBT that reads in a gzipped NBT file.
+;; nbt:read
+;; --------
+;;
+;; **nbt:read** is a wrapper around do-readNBT that reads in a gzipped NBT file.
 ;; We first open a special z3 input port that uncompresses the data on the fly,
 ;; and then we let the current-input-port be that z3 port for the NBT-reading
 ;; phase.
@@ -36,31 +51,39 @@
       (do-readNBT))))
 
 ;;
-;; nbt:read-uncompressed is a wrapper around do-readNBT that, well, reads an
+;; nbt:read-uncompressed
+;; ---------------------
+;;
+;; **nbt:read-uncompressed** is a wrapper around do-readNBT that, well, reads an
 ;; uncompressed NBT file.
 ;;
 (define (nbt:read-uncompressed filename)
   (with-input-from-file filename do-readNBT))
 
 ;;
-;; do-readNBT reads in the NBT file and returns a list representing that NBT
-;; file structure.
+;; do-readNBT
+;; ----------
+;;
+;; **do-readNBT** reads in the NBT file and returns a list representing that
+;; NBT file structure.
 ;;
 ;; Compound tags are represented as lists:
+;;
 ;;     (tag-name (tag1 tag2 tag3 ...))
 ;;
 ;; While tag lists (which are fixed-length and single-type only) are
 ;; vectors:
+;;
 ;;     #(tag1 tag2 tag3 ...)
 ;;
 (define (do-readNBT)
 
   ;;
-  ;; readName reads in a UTF8 string. It is used for reading the names off
+  ;; **readName** reads in a UTF8 string. It is used for reading the names off
   ;; of named tags.
   ;;
-  ;; Note that importing utf8.egg will actually break this procedure! The
-  ;; length of the string is defined as exactly how many *bytes* long the
+  ;; *Note that importing utf8.egg will actually break this procedure!*
+  ;; The length of the string is defined as exactly how many *bytes* long the
   ;; string is, NOT how many utf8 chars long it is.
   ;;
   (define (readName)
@@ -70,7 +93,7 @@
       (read-string strlen)))
 
   ;;
-  ;; readCompound reads a compound tag into a list using recursion until it
+  ;; **readCompound** reads a compound tag into a list using recursion until it
   ;; hits the end of the compound tag.
   ;;
   (define (readCompound)
@@ -83,7 +106,7 @@
       (continueCompound)))
 
   ;;
-  ;; readByte reads in a 1-byte (8-bit) *signed* integer
+  ;; **readByte** reads in a 1-byte (8-bit) *signed* integer
   ;;
   (define (readByte)
     (let ([val (read-byte)])
@@ -92,7 +115,7 @@
         val)))
 
   ;; 
-  ;; readShort reads in a two-byte (16-bit) integer
+  ;; **readShort** reads in a two-byte (16-bit) integer
   ;;
   (define (readShort)
     (let ([val (+ (fxshl (read-byte) 8)
@@ -144,6 +167,8 @@
            (read-byte)))))
 
   ;;
+  ;; **readFloat** reads in a 32-bit Big Endian IEEE 754 float.
+  ;;
   ;; These are some unfun C routines to convert 4 int-promoted bytes to a float
   ;; by manually assembling the float using bitwise operators
   ;;
@@ -159,12 +184,13 @@
                (int i3)
                (int i4))
   ;; Diagram of a 32-bit IEEE 754 float
-  ;;    sign     exponent            fraction
+  ;;
+  ;;     sign   exponent            fraction
   ;;       ||===============|=============================================|
   ;;      |_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|
   ;;      |______b1_______|______b2_______|______b3_______|______b4_______| 
   ;;
-  ;; The last little *(float*)&i part taken from the q3_sqrt code :D
+  ;; The last little \*(float\*)&i part taken from the q3_sqrt code.
                "uint8_t b1 = (uint8_t) i1;
                 uint8_t b2 = (uint8_t) i2;
                 uint8_t b3 = (uint8_t) i3;
@@ -187,7 +213,7 @@
           (c-read-float i1 i2 i3 i4))))
 
   ;;
-  ;; See comments at readFloat
+  ;; **readDouble**: See comments at **readFloat**
   ;;
   (define (readDouble)
     (let ([c-read-double
@@ -233,12 +259,12 @@
                [i8 (read-byte)])
           (c-read-double i1 i2 i3 i4 i5 i6 i7 i8))))
 
-  ;; readByteArray reads in a TAG_Byte_Array and returns a vector of numbers
-  ;; representing that byte array.  Note that, since Chicken promotes all read
-  ;; bytes into ints that the resulting vector will take up 4--8 times as much
-  ;; memory as it did in the original file format.
+  ;; **readByteArray** reads in a `TAG_Byte_Array` and returns a vector of
+  ;; numbers representing that byte array.  Note that, since Chicken promotes
+  ;; all read bytes into ints that the resulting vector will take up 4--8 times
+  ;; as much memory as it did in the original file format.
   (define (readByteArray)
-    ;; TAG_Byte_Array comes with an Integer length specification
+    ;; `TAG_Byte_Array` comes with an Integer length specification
     (let* ([len (readInt)]
            [bytevec (make-u8vector len)])
       (letrec ([continueByteArray
@@ -264,19 +290,19 @@
   (define pre-types #f)
 
   ;;
-  ;; readList reads a list tag into a vector using recursion until it reaches
-  ;; the end of the list, as specified by the TAG_Int length tag.
+  ;; **readList** reads a list tag into a vector using recursion until it
+  ;; reaches the end of the list, as specified by the `TAG_Int` length tag.
   ;;
   ;; Why are NBT lists represented as vectors here? NBT defines them to be
-  ;; fixed-length, single-type structures (unlike TAG_Compound), so it's clear
-  ;; that they're not like linked lists, but instead like arrays
+  ;; fixed-length, single-type structures (unlike `TAG_Compound`), so it's clear
+  ;; that they're not like linked lists, but instead like arrays.
   ;;
   (define (readList)
     (let* ([type (read-byte)]
            [len (readInt)]
            [vec (make-vector len)]
            ;;
-           ;; typedef is a row pulled out of our type table (see below), that
+           ;; `typedef` is a row pulled out of our type table (see below), that
            ;; takes the form:
            ;;     `(4 long ,readLong)
            ;;
@@ -295,7 +321,8 @@
           vec))))
 
   ;;
-  ;; A table of tag IDs, their names, and their corresponding read procedures
+  ;; **types**: A table of tag IDs, their names, and their corresponding read
+  ;; procedures
   ;;
   (define types `((0  end   ,(lambda () (error "TAG_End")))
                   (1  byte  ,readByte)
@@ -310,8 +337,8 @@
                   (10 compound ,readCompound)))
 
   ;;
-  ;; readTag reads in a tag of the given tag type. It basically looks up the
-  ;; corresponding name and procedure out of the table types (above).
+  ;; **readTag** reads in a tag of the given tag type. It basically looks up
+  ;; thecorresponding name and procedure out of the table types (above).
   ;;
   (define (readTag type)
     ;; special case for end tag
@@ -323,7 +350,9 @@
 
   ;; Make sure top-level tag is compound.
   (if (= (read-byte) 10)
-    ;; kick off the NBT parsing!
+    ;;
+    ;; **Kick off the NBT parsing!**
+    ;;
     (begin
       ;; see ugly-hack note at "pre-types"
       (set! pre-types types)
@@ -331,4 +360,7 @@
     (begin
       (error "Top-level tag is not a compound tag!"))))
 
-) ;; End of module "nbt".
+;; End
+;; ---
+)
+;; This concludes the module `nbt`.
