@@ -56,7 +56,7 @@ The data structure, as parsed by chicken-nbt, looks like:
 
     (compound
       "Level"
-      (short "shortTest" 32767)
+     ((short "shortTest" 32767)
       (long "longTest" 9223372036854775807)
       (string "stringTest" "HELLO WORLD THIS IS A TEST STRING ÅÄÖ!")
       (float "floatTest" 0.498231470584869)
@@ -84,7 +84,12 @@ The data structure, as parsed by chicken-nbt, looks like:
       (byte-array
         "byteArrayTest (the first 1000 values of (n*n*255+n*7)%100, starting with n=0 (0, 62, 34, 16, 8, ...))"
         #u8(0 62 34 ...))
-      (double "doubleTest" 0.493128713218231))
+      (double "doubleTest" 0.493128713218231)))
+
+## Documentation
+
+You can generate documentation for the source code by running `docco *.ss` in
+this directory.
 
 ## License
 
