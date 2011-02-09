@@ -327,7 +327,7 @@
     (begin
       ;; see ugly-hack note at "pre-types"
       (set! pre-types types)
-      `(compound ,(readName) . ,(readCompound)))
+      `(compound ,(readName) ,(readCompound)))
     (begin
       (error "Top-level tag is not a compound tag!"))))
 
