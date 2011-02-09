@@ -56,8 +56,8 @@ The data structure, as parsed by chicken-nbt, looks like:
 
     (compound
       "Level"
-      (long "longTest" 9223372036854775807)
       (short "shortTest" 32767)
+      (long "longTest" 9223372036854775807)
       (string "stringTest" "HELLO WORLD THIS IS A TEST STRING ÅÄÖ!")
       (float "floatTest" 0.498231470584869)
       (int "intTest" 2147483647)
@@ -83,7 +83,7 @@ The data structure, as parsed by chicken-nbt, looks like:
       (byte "byteTest" 127)
       (byte-array
         "byteArrayTest (the first 1000 values of (n*n*255+n*7)%100, starting with n=0 (0, 62, 34, 16, 8, ...))"
-        #(0 62 34 ...))
+        #u8(0 62 34 ...))
       (double "doubleTest" 0.493128713218231))
 
 ## License
