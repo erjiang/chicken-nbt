@@ -8,6 +8,14 @@
 ;; what's inside.
 ;;
 
+;;
+;; This program declares itself as the "nbt" module, which exports "nbt:read"
+;; and "nbt:read-uncompressed".
+;;
+(module nbt (nbt:read nbt:read-uncompressed)
+
+(import scheme chicken foreign extras)
+
 (require-extension z3)
 
 ;; bignum support is needed for dealing with long longs
@@ -16,19 +24,26 @@
 ;; SRFI 4 is used for u8vectors
 (use srfi-4)
 
-(define (main leveldat)
-  (let* ([in (z3:open-compressed-input-file leveldat)])
-    (display 
-      ;;
-      ;; Let all read operations automatically pull from the gzip reader
-      ;;
-      (parameterize ([current-input-port in])
-        (pretty-print (readNBT))
-        (newline)
-        0))))
+;;
+;; nbt:read is a wrapper around do-readNBT that reads in a gzipped NBT file.
+;; We first open a special z3 input port that uncompresses the data on the fly,
+;; and then we let the current-input-port be that z3 port for the NBT-reading
+;; phase.
+;;
+(define (nbt:read filename)
+  (let ([in (z3:open-compressed-input-file filename)])
+    (parameterize ([current-input-port in])
+      (do-readNBT))))
 
 ;;
-;; readNBT reads in the NBT file and returns a list representing that NBT
+;; nbt:read-uncompressed is a wrapper around do-readNBT that, well, reads an
+;; uncompressed NBT file.
+;;
+(define (nbt:read-uncompressed filename)
+  (with-input-from-file filename do-readNBT))
+
+;;
+;; do-readNBT reads in the NBT file and returns a list representing that NBT
 ;; file structure.
 ;;
 ;; Compound tags are represented as lists:
@@ -38,7 +53,7 @@
 ;; vectors:
 ;;     #(tag1 tag2 tag3 ...)
 ;;
-(define (readNBT)
+(define (do-readNBT)
 
   ;;
   ;; readName reads in a UTF8 string. It is used for reading the names off
@@ -316,13 +331,4 @@
     (begin
       (error "Top-level tag is not a compound tag!"))))
 
-;; A tiny util to get the last element out of a list.
-;; I suppose I could use SRFI-1, but why?
-(define (last ls)
-  (if (null? (cdr ls))
-    (car ls)
-    (last (cdr ls))))
-
-(if (null? (command-line-arguments))
-  (display "Must give path to level.dat\n")
-  (main (last (command-line-arguments))))
+) ;; End of module "nbt".
