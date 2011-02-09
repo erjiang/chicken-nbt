@@ -13,6 +13,9 @@
 ;; bignum support is needed for dealing with long longs
 (use numbers)
 
+;; SRFI 4 is used for u8vectors
+(use srfi-4)
+
 (define (main leveldat)
   (let* ([in (z3:open-compressed-input-file leveldat)])
     (display 
@@ -222,13 +225,17 @@
   (define (readByteArray)
     ;; TAG_Byte_Array comes with an Integer length specification
     (let* ([len (readInt)]
-           [bytevec (make-vector len)])
+           [bytevec (make-u8vector len)])
       (letrec ([continueByteArray
                  (lambda (i)
                    (if (= i len)
                      (void) ;; end of vector
                      (begin
-                       (vector-set! bytevec i (readByte))
+                       ;; remember that readByte reads *signed* bytes, and
+                       ;; read-byte reads *unsigned* bytes. Since we're using a
+                       ;; u8vector (and not an s8vector), we need unsigned
+                       ;; bytes
+                       (u8vector-set! bytevec i (read-byte))
                        (continueByteArray (+ 1 i)))))])
         (begin
           (continueByteArray 0)
